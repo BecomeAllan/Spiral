@@ -22,8 +22,6 @@ X81bacias <- read_excel("data/81bacias.xlsx")
 pred_data <- read_csv("data/pred_data.csv")
 ```
 
-
-
 ```{r}
 data = pred_data[pred_data$bacia %in% X81bacias$Estação, c("bacia", "ano", "mes", "P1", "P2")]
 data[is.na(data)] = 0
@@ -60,9 +58,6 @@ axz <- list(
   title = ""
 )
 ```
-
-
-
 
 ```{r}
 
@@ -132,9 +127,6 @@ fig
 
 ```
 
-
-
-
 ```{r}
 b= left_join(
   data_a %>% 
@@ -173,7 +165,7 @@ fig <- plot_ly(data = k[ (k$bacia %in% levels(k$bacia)[1]) , ] ,
         mode = 'lines',
         connectgaps = TRUE,
         line = list(width = 2, color = ~radius,
-                    cmid = 0.5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
+                    cmid = 0.7,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
                     colorscale = list(c(0, "#00ddff"),
                                       c(1, "#0d00ff"),
                                       c(1.5,'#c70000')
@@ -189,18 +181,440 @@ for(i in 2:length(levels(a$bacia)) ){
                            x = ~x, y = ~y, z = ~z, text = ~label,
                            connectgaps = TRUE,
                            hoverinfo = "text",
-                           opacity  = .7,
+                           opacity  = 1,
                            type = 'scatter3d',
                            mode = 'lines',
                            showlegend = F,
                            line = list(width = 2, color = ~radius,
-                                       cmid = 0.5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
+                                       cmid = .5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
                                        colorscale = list(c(0, "#00ddff"),
-                                                         c(1, "#0d00ff"),
-                                                         c(1.5,'#c70000')
+                                                         c(1.5, "#0d00ff"),
+                                                         c(1.7,'#c70000')
                                        )))
   
 }
 
 fig
 ```
+
+
+
+
+```{r}
+#| fig-cap: "Angulo (xy) por bacia, com eixo z sendo o ano"
+
+k = left_join(
+  data_a %>% 
+    filter(ano==1985, mes ==1) %>%
+    select(bacia,Start=media_ano)
+  ,
+  data_a %>% distinct(bacia, ano, media_ano)
+) %>% 
+  
+  group_by(ano) %>%
+  mutate(index=row_number(),
+         media_ref1985 = round(media_ano/Start,4) ,
+         radius = 0.5 + media_ref1985,
+         theta = 2*pi * (index-1)/81) %>% #arrange(ano) %>% head(10) #%>% view()
+  mutate(
+    x = radius * sin(theta),
+    y = radius * cos(theta),
+    z = ano ,
+    label = glue("{ano} - {bacia}\n Média|1985 - {media_ref1985*100}%")
+  ) %>% arrange(ano) %>% ungroup()
+
+
+{
+  
+  
+color = list(width = 4, color = ~media_ref1985,
+                                       cmid = .5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
+                                       colorscale = list(c(1, "#03e8fc"),
+                                                         c(1.5, "#0d00ff"),
+                                                         c(3,'#c70000')
+                                       ))
+
+  
+fig <- plot_ly(data = k[ (k$bacia %in% levels(k$bacia)[1]) , ] ,
+        x = ~x, y = ~y, z = ~z, text = ~label,
+        hoverinfo = "text",
+        opacity  = .8,
+        type = 'scatter3d',
+        mode = 'lines',
+        connectgaps = TRUE,
+        line = color) %>%
+  layout(scene = list(xaxis=axx,
+                      yaxis=axy,
+                      zaxis=axz))
+  
+
+
+
+
+for(i in 2:length(levels(a$bacia)) ){
+  fig <- fig %>% add_trace(data = k[ (k$bacia %in% levels(k$bacia)[i]) , ] ,
+                           x = ~x, y = ~y, z = ~z, text = ~label,
+                           connectgaps = TRUE,
+                           hoverinfo = "text",
+                           opacity  = .8,
+                           type = 'scatter3d',
+                           mode = 'lines',
+                           showlegend = F,
+                           line = color)
+  
+}
+
+fig
+  }
+
+```
+
+
+# ORDENAMENTO com base no desvio
+
+O gráfico a baixo tem como ordem os index com base no maior desvio padrão para o menor, o gráfico é um semi-circulo, cada angulo de $(0\le\theta\le\pi)$ é uma bacia diferente.
+
+
+```{r}
+test = left_join(
+  data_a %>% 
+    filter(ano==1985, mes ==1) %>%
+    select(bacia,Start=media_ano)
+  ,
+  data_a %>% distinct(bacia, ano, media_ano)
+) 
+
+
+
+
+k = test %>% group_by(bacia) %>% mutate(
+  med = mean(media_ano),
+  sd = sd(media_ano)) %>% ungroup() %>%
+  
+  group_by(ano) %>% arrange(desc(sd)) %>%
+  mutate(index=row_number(),
+         media_ref1985 = round(media_ano/Start,4) ,
+         radius = media_ref1985,
+         theta =  pi * (index-1)/81) %>% #arrange(ano) %>% head(100) %>% view()
+  mutate(
+    x = radius * sin(theta),
+    y = radius * cos(theta),
+    z = ano ,
+    label = glue("{ano} - {bacia}\n Média|1985 - {media_ref1985*100}%")
+  ) %>% ungroup()
+  
+  
+
+```
+
+
+```{r}
+#| fig-cap: "Angulo (xy) por bacia (de 0<theta<pi), com eixo z sendo o ano, no qual a ordem das bacias é distribuida por angulo (theta) começando pela bacia de maior desvio padrão com relação (ano,media_ref1985) até a menor."
+
+
+{
+  
+  
+color = list(width = 4, color = ~media_ref1985,
+                                       cmid = 0.5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
+                                       colorscale = list(c(0, "#ffffff"),
+                                                         c(1.5, "#0d00ff"),
+                                                         c(3,'#c70000')
+                                       ))
+
+  
+fig <- plot_ly(data = k[ (k$bacia %in% levels(k$bacia)[1]) , ] ,
+        x = ~x, y = ~y, z = ~z, text = ~label,
+        hoverinfo = "text",
+        opacity  = .8,
+        type = 'scatter3d',
+        mode = 'lines',
+        connectgaps = TRUE,
+        line = color) %>%
+  layout(scene = list(xaxis=axx,
+                      yaxis=axy,
+                      zaxis=axz))
+  
+
+
+#k %>% view()
+
+for(i in 2:length(levels(k$bacia)) ){
+  fig <- fig %>% add_trace(data = k[ (k$bacia %in% levels(k$bacia)[i]) , ] ,
+                           x = ~x, y = ~y, z = ~z, text = ~label,
+                           connectgaps = TRUE,
+                           hoverinfo = "text",
+                           opacity  = .7,
+                           type = 'scatter3d',
+                           mode = 'lines',
+                           showlegend = F,
+                           line = color)
+  
+}
+
+fig
+  }
+```
+
+
+O gráfico a baixo tem como ordem os index com base no maior desvio padrão para o menor, o gráfico é um semi-circulo, cada angulo de $(0\le\theta\le\pi)$ é uma bacia diferente.
+
+
+```{r}
+test = left_join(
+  data_a %>% 
+    filter(ano==1985, mes ==1) %>%
+    select(bacia,Start=media_ano)
+  ,
+  data_a %>% distinct(bacia, ano, media_ano)
+) %>% mutate(
+  media_ref1985 = round(media_ano/Start,4),
+         radius = media_ref1985
+  )
+
+
+k = test %>%
+  group_by(ano) %>% arrange(desc(media_ref1985)) %>%
+  mutate(index=row_number(),
+         theta =  pi * (index-1)/81) %>% #arrange(ano) %>% head(100) %>% view()
+  mutate(
+    x = radius * cos(theta),
+    y = radius * sin(theta),
+    z = ano ,
+    label = glue("{ano} - {bacia}\n Média|1985 - {media_ref1985*100}%")
+  ) %>% ungroup()
+  
+  
+
+```
+
+
+
+
+```{r}
+#| fig-cap: "Angulo (theta) (de 0<theta<2pi) densidade do valor media_ref1985, com eixo z sendo o ano, no qual a ordem das bacias é distribuida conforme a densidade computada em todas as bacia (theta) no respectivo ano"
+
+a = 1985
+x = as.vector(test[test$ano == a,"media_ref1985"])
+d = density(x$media_ref1985)
+
+#plot(d)
+len = length(d$x)
+
+data = data.frame(index= 1:len) %>% mutate(
+           theta =   2*pi * (index-1)/len)
+
+data$radius = d$y*100
+data$dx = d$x
+data$dy = d$y
+
+data = data %>% mutate(
+           x = radius * cos(theta),
+           y = radius * sin(theta),
+           z = a,
+           label= glue("{a}\n Média|1985 - {dx*100}%"))
+
+# color = list(width = 4, color = ~dx,
+#                                        cmid = 0.5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
+#                                        colorscale = list(c(0, "#ffffff"),
+#                                                          c(1, "#0d00ff"),
+#                                                          c(3,'#c70000')
+#                                        ))
+color = list(width = 6, color = ~dx, colorscale = 'Viridis', cmin = 0, cmax = 1.5)
+
+
+
+fig <- plot_ly(data = data ,
+        x = ~x, y = ~y, z = ~z, text = ~label,
+        hoverinfo = "text",
+        opacity  = 1,
+        type = 'scatter3d',
+        mode = 'lines',
+        connectgaps = TRUE,
+        line = color) %>%
+  layout(scene = list(xaxis=axx,
+                      yaxis=axy,
+                      zaxis=axz))
+
+
+
+
+
+for (a in unique(test$ano) ) {
+  x = as.vector(test[test$ano == a,"media_ref1985"])
+  d = density(x$media_ref1985)
+  len = length(d$x)
+  
+  data = data.frame(index= 1:len) %>% mutate(
+             theta =  2*pi * (index-1)/len)
+  
+  data$radius =  1+d$y*100
+  data$dx = d$x
+  data$dy = d$y
+  
+  data = data %>% mutate(
+             x = radius * cos(theta),
+             y = radius * sin(theta),
+             z = a,
+             label= glue("{a}\n Densidade {round(dy,3)} \n Média|1985: {round(dx*100,2)}%"))
+  
+  fig <- fig %>% add_trace(data = data,
+                           x = ~x, y = ~y, z = ~z, text = ~label,
+                           connectgaps = TRUE,
+                           hoverinfo = "text",
+                           opacity  = 0.8,
+                           type = 'scatter3d',
+                           mode = 'lines',
+                           showlegend = F,
+                           line = color)
+
+  
+  ###
+  
+  x = as.vector(test[test$ano == 1985,"media_ref1985"])
+  d = density(x$media_ref1985)
+  
+  #plot(d)
+  len = length(d$x)
+  
+  data = data.frame(index= 1:len) %>% mutate(
+             theta =   2*pi * (index-1)/len)
+  
+  data$radius = d$y*100
+  data$dx = d$x
+  data$dy = d$y
+  
+  data = data %>% mutate(
+             x = radius * cos(theta),
+             y = radius * sin(theta),
+             z = a,
+             label= glue("{a}\n Densidade {round(dy,3)} \n Média|1985: {round(dx*100,2)}%"))
+
+
+  fig <- fig %>% add_trace(data = data,
+                           x = ~x, y = ~y, z = ~z,
+                           connectgaps = TRUE,
+                           hoverinfo = "text",
+                           opacity  = 0.5,
+                           type = 'scatter3d',
+                           mode = 'lines',
+                           showlegend = F,
+                           line = list(width = 2 , color = "red")
+                           )
+}
+
+
+fig
+
+
+```
+
+
+
+Gráfico a baixo é a mesma visualização do que o de cima, a diferença é que não é rotacionado no circulo a densidade.
+
+```{r}
+
+a = 1985
+x = as.vector(test[test$ano == a,"media_ref1985"])
+d = density(x$media_ref1985)
+len = length(d$x)
+data = data.frame(index= 1:len)
+data$x = d$x
+data$y = d$y
+data$z = a
+
+data = data %>% mutate(
+           label= glue("{a}\n Média|1985 - {x*100}%"))
+
+color = list(width = 4, color = ~x,
+                                       cmid = 0.5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
+                                       colorscale = list(c(0, "#ffffff"),
+                                                         c(1.5, "#0d00ff"),
+                                                         c(3,'#c70000')
+                                       ))
+
+
+
+fig <- plot_ly(data = data ,
+        x = ~x, y = ~y, z = ~z, text = ~label,
+        hoverinfo = "text",
+        opacity  = 1,
+        type = 'scatter3d',
+        mode = 'lines',
+        connectgaps = TRUE,
+        line = color) %>%
+  layout(scene = list(xaxis=axx,
+                      yaxis=axy,
+                      zaxis=axz))
+
+
+
+
+
+for (a in unique(test$ano) ) {
+  x = as.vector(test[test$ano == a,"media_ref1985"])
+  d = density(x$media_ref1985)
+  len = length(d$x)
+  
+  data = data.frame(index= 1:len)
+  data$x = d$x
+  data$y = d$y
+  data$z = a
+  
+  data = data %>% mutate(
+           label= glue("{a}\n Média|1985 - {x*100}%"))
+
+  
+  fig <- fig %>% add_trace(data = data,
+                           x = ~x, y = ~y, z = ~z, text = ~label,
+                           connectgaps = TRUE,
+                           hoverinfo = "text",
+                           opacity  = 1,
+                           type = 'scatter3d',
+                           mode = 'lines',
+                           showlegend = F,
+                           line = color)
+  
+    
+  x = as.vector(test[test$ano == 1985,"media_ref1985"])
+  d = density(x$media_ref1985)
+  
+  #plot(d)
+  len = length(d$x)
+  
+  data = data.frame(index= 1:len) %>% mutate(
+             theta =   pi * (index-1)/len)
+  
+  data$radius = d$y*100
+  data$x = d$x
+  data$y = d$y
+  data$z = a
+  
+  data = data %>% mutate(
+             label= glue("{a} \n Média|1985 - {x*100}%"))
+
+
+  fig <- fig %>% add_trace(data = data,
+                           x = ~x, y = ~y, z = ~z,
+                           connectgaps = TRUE,
+                           hoverinfo = "text",
+                           opacity  = 0.8,
+                           type = 'scatter3d',
+                           mode = 'lines',
+                           showlegend = F,
+                           line = list(width = 1 , color = "black")
+                           )
+  
+  
+}
+
+
+
+
+fig %>% layout(autosize = F, yaxis = list(
+                      scaleanchor = "x",
+                      scaleratio = 1))
+```
+
+
