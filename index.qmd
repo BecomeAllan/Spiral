@@ -1,8 +1,20 @@
 ---
 title: "Spiral"
-format: html
-editor: visual
+author: "Allan Almeida, Ana Clara Valério, Davi Esmeraldo, Davi Wentrick, Gabriel Veiga, Gabriela Lobo, Júlia Garcia, Júlia Borges, Natália Vieira, Stephany Lima"
+
+format:
+  revealjs: 
+    controls-layout: bottom-right
+    controls-tutorial: true
+    slide-number: true
+    theme: beige
+    scrollable: true
+    chalkboard: 
+      buttons: true
 ---
+
+
+
 
 ```{r}
 #| echo: false
@@ -20,24 +32,6 @@ library(readxl)
 #| #| warning: false
 X81bacias <- read_excel("data/81bacias.xlsx")
 pred_data <- read_csv("data/pred_data.csv")
-```
-
-```{r}
-data = pred_data[pred_data$bacia %in% X81bacias$Estação, c("bacia", "ano", "mes", "P1", "P2")]
-data[is.na(data)] = 0
-
-data_a = data %>%
-    mutate(P = P1 + P2) %>%
-    group_by(bacia, ano) %>%
-    mutate(media_ano = mean(P),
-           "P/media_ano"=P/media_ano) %>% select(bacia,ano,mes,P, media_ano,"P/media_ano") %>%
-  ungroup()
-
-data_a$bacia = as.factor(data_a$bacia)
-
-
-
-#######
 
 
 axx <- list(
@@ -57,7 +51,61 @@ axy <- list(
 axz <- list(
   title = ""
 )
+
+######### DATA
+
+data = pred_data[pred_data$bacia %in% X81bacias$Estação, c("bacia", "ano", "mes", "P1", "P2")]
+data[is.na(data)] = 0
+
+data_a = data %>%
+    mutate(P = P1 + P2) %>%
+    group_by(bacia, ano) %>%
+    mutate(media_ano = mean(P),
+           "P/media_ano"=P/media_ano) %>% select(bacia,ano,mes,P, media_ano,"P/media_ano") %>%
+  ungroup()
+
+data_a$bacia = as.factor(data_a$bacia)
 ```
+
+## Introdução
+
+Pesquisa sobre a vazão das bacias do cerrado
+- 81 bacias
+- COP27
+
+
+O que fizemos ao longo desse projeto
+Canal Riffomonas
+
+- Gráfico 2D
+- Animação
+- Gráfico 3D
+
+
+## Métodologia
+
+::: {style="text-align: center; margin-top: 1em"}
+Tratamento dos dados
+
+Proporção
+
+Ordenação das bacias
+
+Pacotes utilizados no R
+
+Suavização
+
+
+:::
+
+
+## Spiral 2D
+
+<video controls>
+  <source src="VID-20230215-WA0001.mp4" type="video/mp4">
+</video>
+
+## Spiral 3D - 1 {.smaller}
 
 ```{r}
 
@@ -83,125 +131,28 @@ a= left_join(
 
 
 k = a %>% ungroup()
-
-####
-
-fig <- plot_ly(data = k[ (k$bacia %in% levels(k$bacia)[1]) , ] ,
-        x = ~x, y = ~y, z = ~z, text = ~label,
-        hoverinfo = "text",
-        opacity  = .7,
-        type = 'scatter3d',
-        mode = 'lines',
-        connectgaps = TRUE,
-        line = list(width = 1, color = ~radius,
-                    cmid = 1,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
-                    colorscale = list(c(0, "#00ddff"),
-                                      c(1, "#0d00ff"),
-                                      c(1.5,'#c70000')
-                                      ))) %>%
-  layout(scene = list(xaxis=axx,
-                      yaxis=axy,
-                      zaxis=axz))
-
-
-
-for(i in 2:length(levels(a$bacia)) ){
-  fig <- fig %>% add_trace(data = k[ (k$bacia %in% levels(k$bacia)[i]) , ] ,
-                           x = ~x, y = ~y, z = ~z, text = ~label,
-                           connectgaps = TRUE,
-                           hoverinfo = "text",
-                           opacity  = .7,
-                           type = 'scatter3d',
-                           mode = 'lines',
-                           showlegend = F,
-                           line = list(width = 2, color = ~radius,
-                                       cmid = 0.5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
-                                       colorscale = list(c(0, "#00ddff"),
-                                                         c(1, "#0d00ff"),
-                                                         c(1.5,'#c70000')
-                                       )))
-  
-}
-
-fig
-
 ```
 
-```{r}
-b= left_join(
-  data_a %>% 
-    filter(ano==1985, mes ==1) %>%
-    select(bacia,Start=media_ano)
-  ,
-  data_a %>% distinct(ano,bacia, media_ano)
-) %>%
-  
-  group_by(bacia) %>%
-  mutate(index=row_number(),
-         media_ref1985 = round(media_ano/Start,4) ,
-         radius = media_ref1985,
-         theta = 2 * pi * (index-1)/66) %>%
-  mutate(
-    x = radius * sin(theta),
-    y = radius * cos(theta),
-    z = ano + theta/(2 * pi) ,
-    label = glue("{ano} - {bacia}\n Média|1985 - {media_ref1985*100}%")
-  ) %>% arrange(ano) %>% ungroup()
+
+:::: {.columns}
+
+::: {.column width="40%" }
+
+- Cada angulo é uma bacia
+- Série Temporal Anual
 
 
+:::
 
 
-k = b %>% ungroup()
-
-
-
-
-
-fig <- plot_ly(data = k[ (k$bacia %in% levels(k$bacia)[1]) , ] ,
-        x = ~x, y = ~y, z = ~z, text = ~label,
-        hoverinfo = "text",
-        opacity  = .7,
-        type = 'scatter3d',
-        mode = 'lines',
-        connectgaps = TRUE,
-        line = list(width = 2, color = ~radius,
-                    cmid = 0.7,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
-                    colorscale = list(c(0, "#00ddff"),
-                                      c(1, "#0d00ff"),
-                                      c(1.5,'#c70000')
-                                      ))) %>%
-  layout(scene = list(xaxis=axx,
-                      yaxis=axy,
-                      zaxis=axz))
-
-
-
-for(i in 2:length(levels(a$bacia)) ){
-  fig <- fig %>% add_trace(data = k[ (k$bacia %in% levels(k$bacia)[i]) , ] ,
-                           x = ~x, y = ~y, z = ~z, text = ~label,
-                           connectgaps = TRUE,
-                           hoverinfo = "text",
-                           opacity  = 1,
-                           type = 'scatter3d',
-                           mode = 'lines',
-                           showlegend = F,
-                           line = list(width = 2, color = ~radius,
-                                       cmid = .5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
-                                       colorscale = list(c(0, "#00ddff"),
-                                                         c(1.5, "#0d00ff"),
-                                                         c(1.7,'#c70000')
-                                       )))
-  
-}
-
-fig
-```
-
+::: {.column width="60%"}
 
 
 
 ```{r}
-#| fig-cap: "Angulo (xy) por bacia, com eixo z sendo o ano"
+#| fig-width: 5
+#| fig-height: 4
+#| cache: true
 
 k = left_join(
   data_a %>% 
@@ -268,99 +219,15 @@ fig
   }
 
 ```
+:::
+
+::::
 
 
-# ORDENAMENTO com base no desvio
-
-O gráfico a baixo tem como ordem os index com base no maior desvio padrão para o menor, o gráfico é um semi-circulo, cada angulo de $(0\le\theta\le\pi)$ é uma bacia diferente.
-
-
-```{r}
-test = left_join(
-  data_a %>% 
-    filter(ano==1985, mes ==1) %>%
-    select(bacia,Start=media_ano)
-  ,
-  data_a %>% distinct(bacia, ano, media_ano)
-) 
-
-
-
-
-k = test %>% group_by(bacia) %>% mutate(
-  med = mean(media_ano),
-  sd = sd(media_ano)) %>% ungroup() %>%
-  
-  group_by(ano) %>% arrange(desc(sd)) %>%
-  mutate(index=row_number(),
-         media_ref1985 = round(media_ano/Start,4) ,
-         radius = media_ref1985,
-         theta =  pi * (index-1)/81) %>% #arrange(ano) %>% head(100) %>% view()
-  mutate(
-    x = radius * sin(theta),
-    y = radius * cos(theta),
-    z = ano ,
-    label = glue("{ano} - {bacia}\n Média|1985 - {media_ref1985*100}%")
-  ) %>% ungroup()
-  
-  
-
-```
-
+## Spiral 3D - 2 {.smaller}
 
 ```{r}
-#| fig-cap: "Angulo (xy) por bacia (de 0<theta<pi), com eixo z sendo o ano, no qual a ordem das bacias é distribuida por angulo (theta) começando pela bacia de maior desvio padrão com relação (ano,media_ref1985) até a menor."
-
-
-{
-  
-  
-color = list(width = 4, color = ~media_ref1985,
-                                       cmid = 0.5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
-                                       colorscale = list(c(0, "#ffffff"),
-                                                         c(1.5, "#0d00ff"),
-                                                         c(3,'#c70000')
-                                       ))
-
-  
-fig <- plot_ly(data = k[ (k$bacia %in% levels(k$bacia)[1]) , ] ,
-        x = ~x, y = ~y, z = ~z, text = ~label,
-        hoverinfo = "text",
-        opacity  = .8,
-        type = 'scatter3d',
-        mode = 'lines',
-        connectgaps = TRUE,
-        line = color) %>%
-  layout(scene = list(xaxis=axx,
-                      yaxis=axy,
-                      zaxis=axz))
-  
-
-
-#k %>% view()
-
-for(i in 2:length(levels(k$bacia)) ){
-  fig <- fig %>% add_trace(data = k[ (k$bacia %in% levels(k$bacia)[i]) , ] ,
-                           x = ~x, y = ~y, z = ~z, text = ~label,
-                           connectgaps = TRUE,
-                           hoverinfo = "text",
-                           opacity  = .7,
-                           type = 'scatter3d',
-                           mode = 'lines',
-                           showlegend = F,
-                           line = color)
-  
-}
-
-fig
-  }
-```
-
-
-O gráfico a baixo tem como ordem os index com base no maior desvio padrão para o menor, o gráfico é um semi-circulo, cada angulo de $(0\le\theta\le\pi)$ é uma bacia diferente.
-
-
-```{r}
+#| cache: true
 test = left_join(
   data_a %>% 
     filter(ano==1985, mes ==1) %>%
@@ -383,16 +250,27 @@ k = test %>%
     z = ano ,
     label = glue("{ano} - {bacia}\n Média|1985 - {media_ref1985*100}%")
   ) %>% ungroup()
-  
-  
-
 ```
 
+:::: {.columns}
 
+::: {.column width="60%"}
 
+- Cada curva é uma densidade da evasão de água no ano das bacias relativas a 1985 rotacionadas em um circulo. O raio $r$ é dado por $r=P(\text{X=Evasão relativa a 1985}|\text{Ano})$ e o ângulo é uma transformação de $x$ para $\theta$ dada por $f: \mathbb{R} \rightarrow [0,2\pi]$
+
+- $f(x)={2\pi\over 1+ e^{-x}}$
+
+- A curva de referência em vermelho é $x\sim N(0,1)$ rotacionada no circulo, no qual as cordenadas são dadas por $(r\cos(\theta), rsin(\theta))$.
+
+:::
+
+::: {.column width="40%"}
 
 ```{r}
-#| fig-cap: "Angulo (theta) (de 0<theta<2pi) densidade do valor media_ref1985, com eixo z sendo o ano, no qual a ordem das bacias é distribuida conforme a densidade computada em todas as bacia (theta) no respectivo ano"
+#install.packages(library(circular))
+#| cache: true
+#| fig-width: 1
+#| fig-height: 1
 
 a = 1985
 x = as.vector(test[test$ano == a,"media_ref1985"])
@@ -401,10 +279,16 @@ d = density(x$media_ref1985)
 #plot(d)
 len = length(d$x)
 
-data = data.frame(index= 1:len) %>% mutate(
-           theta =   2*pi * (index-1)/len)
+f <- function(x) {
+  2*pi/{1+exp(-x)}
+}
 
-data$radius = d$y*100
+data = data.frame(index= 1:len) %>% mutate(
+           #theta =   2*pi * (index-1)/len,
+           theta =  f(d$x)
+           )
+
+data$radius = d$y
 data$dx = d$x
 data$dy = d$y
 
@@ -412,14 +296,9 @@ data = data %>% mutate(
            x = radius * cos(theta),
            y = radius * sin(theta),
            z = a,
-           label= glue("{a}\n Média|1985 - {dx*100}%"))
+           label= glue("{a}\n Média|1985 - {round(dx,2)*100}%"))
 
-# color = list(width = 4, color = ~dx,
-#                                        cmid = 0.5,# cmin=min(t_data$t_diff), cmax=max(t_data$t_diff),
-#                                        colorscale = list(c(0, "#ffffff"),
-#                                                          c(1, "#0d00ff"),
-#                                                          c(3,'#c70000')
-#                                        ))
+
 color = list(width = 6, color = ~dx, colorscale = 'Viridis', cmin = 0, cmax = 1.5)
 
 
@@ -446,9 +325,11 @@ for (a in unique(test$ano) ) {
   len = length(d$x)
   
   data = data.frame(index= 1:len) %>% mutate(
-             theta =  2*pi * (index-1)/len)
+             #theta =  2*pi * (index-1)/len
+             theta =  f(d$x)
+             )
   
-  data$radius =  1+d$y*100
+  data$radius =  d$y
   data$dx = d$x
   data$dy = d$y
   
@@ -478,9 +359,10 @@ for (a in unique(test$ano) ) {
   len = length(d$x)
   
   data = data.frame(index= 1:len) %>% mutate(
-             theta =   2*pi * (index-1)/len)
+    theta =  f(d$x))
+#             theta =   2*pi * (index-1)/len)
   
-  data$radius = d$y*100
+  data$radius = d$y
   data$dx = d$x
   data$dy = d$y
   
@@ -510,11 +392,28 @@ fig
 ```
 
 
+:::
 
-Gráfico a baixo é a mesma visualização do que o de cima, a diferença é que não é rotacionado no circulo a densidade.
+::::
+
+
+
+## Spiral 3D - 3 {.smaller}
+
+:::: {.columns}
+
+::: {.column width="40%"}
+
+- Cada curva é uma densidade da evasão de água no ano das bacias relativas as 1985. 
+
+:::
+
+::: {.column width="60%"}
 
 ```{r}
-
+#| fig-width: 5
+#| fig-height: 4
+#| cache: true
 a = 1985
 x = as.vector(test[test$ano == a,"media_ref1985"])
 d = density(x$media_ref1985)
@@ -618,3 +517,16 @@ fig %>% layout(autosize = F, yaxis = list(
 ```
 
 
+:::
+
+::::
+
+
+
+
+
+
+## Referências
+
+
+![Video](Captura de tela 2023-02-15 005435.png)
