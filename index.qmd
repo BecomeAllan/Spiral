@@ -115,11 +115,20 @@ a= left_join(
     select(bacia,Start=media_ano)
   ,
   data_a #%>% distinct(ano,mes,bacia,media_ano)
-) %>%
-  
+) %>% group_by(bacia, ano) %>%
+  mutate(media_ref1985 = round(P/Start,4) )
+
+annotation_max <- a %>% 
+  #filter(ano %in% 1985:2000) %>% 
+  group_by(bacia)  %>%
+  slice_max(media_ref1985) %>% arrange(desc(media_ref1985 )) 
+
+annotation_max$index <- 1:81
+
+a <- left_join(annotation_max %>% select(bacia,index),a, by = "bacia") %>%
   group_by(bacia, ano) %>%
-  mutate(index=row_number(),
-         media_ref1985 = round(P/Start,4) ,
+  mutate(#index=row_number(),
+         #media_ref1985 = round(P/Start,4) ,
          radius = media_ref1985,
          theta = 2 * pi * (index-1)/12) %>%
   mutate(
@@ -128,6 +137,8 @@ a= left_join(
     z = ano + theta/(2 * pi) ,
     label = glue("{mes}/{ano} - {bacia}\n Média|1985 - {media_ref1985*100}%")
   ) %>% arrange(ano, mes) %>% ungroup()
+  
+
 
 
 k = a %>% ungroup()
@@ -160,11 +171,20 @@ k = left_join(
     select(bacia,Start=media_ano)
   ,
   data_a %>% distinct(bacia, ano, media_ano)
-) %>% 
-  
+) %>% group_by(ano) %>%
+  mutate(media_ref1985 = round(media_ano/Start,4) )
+
+annotation_max <- k %>% 
+  #filter(ano %in% 1985:2000) %>% 
+  group_by(bacia)  %>%
+  slice_max(media_ref1985) %>% arrange(desc(media_ref1985 )) 
+
+annotation_max$index <- 1:81
+
+k <- left_join(annotation_max %>% select(bacia,index),k, by = "bacia") %>%
   group_by(ano) %>%
-  mutate(index=row_number(),
-         media_ref1985 = round(media_ano/Start,4) ,
+  mutate(#index=row_number(),
+         #media_ref1985 = round(media_ano/Start,4) ,
          radius = 0.5 + media_ref1985,
          theta = 2*pi * (index-1)/81) %>% #arrange(ano) %>% head(10) #%>% view()
   mutate(
